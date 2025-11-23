@@ -1,0 +1,36 @@
+name: Build Android APK
+on: 
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - name: Fix Android Gradle Settings and V2 Embedding
+        run: |
+          # 1. תיקון גרסאות SDK
+          sed -i 's|compileSdkVersion 33|compileSdkVersion 34|g' android/app/build.gradle
+          sed -i 's|targetSdkVersion 33|targetSdkVersion 34|g' android/app/build.gradle
+          sed -i '/android {/a \        minSdkVersion 21' android/app/build.gradle
+          
+          # 2. תיקון V1 Embedding (השורה הקריטית):
+          mkdir -p android/app/src/main/kotlin/com/example/pumper_app 
+          echo "flutter.embedding=2" > android/local.properties
+          
+      - name: Get Dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release
+        
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
